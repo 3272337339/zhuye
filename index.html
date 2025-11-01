@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>个人主页</title>
+    <style>
+        /* CSS Reset and Basic Styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", Arial, sans-serif;
+            background-color: #F0F2F5;
+            -webkit-tap-highlight-color: transparent;
+            /* 防止主页面在聊天界面滑入时滚动 */
+            overflow-x: hidden;
+        }
+
+        .profile-card { max-width: 720px; margin: 0 auto; background-color: #ffffff; overflow: hidden; }
+
+        /* --- Top Section --- */
+        .profile-header { position: relative; width: 100%; perspective: 1200px; }
+        .background-image { width: 100%; padding-top: 80%; background-image: url('https://img12.360buyimg.com/ddimg/jfs/t1/340136/30/26517/36233/6905f508F781ea04d/6a1f67630eaae99a.jpg'); background-size: cover; background-position: center; transform-style: preserve-3d; }
+        .profile-info-wrapper { background-color: #ffffff; padding: 0 20px; margin-top: -2px; }
+        .avatar { position: absolute; top: 80vw; left: 50%; transform: translate(-50%, -50%); width: 90px; height: 90px; border-radius: 50%; border: 4px solid #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); object-fit: cover; cursor: pointer; transform-style: preserve-3d; }
+        .user-details { padding-top: 55px; text-align: center; display: flex; flex-direction: column; align-items: center; margin-top: -5px; }
+        .username-line { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; transform-style: preserve-3d; }
+        .username { font-size: 20px; font-weight: 600; color: #343434; }
+        .verified-badge { width: 20px; height: 20px; background-color: #E6B322; border-radius: 50%; color: #ffffff; font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center; margin-left: 8px; line-height: 1; }
+        .signature { font-size: 14px; color: #888888; margin-bottom: 18px; min-height: 20px; }
+
+        /* --- 翻转动画 (问题修复) --- */
+        /* 通用翻转动画 (用于背景、用户名等) */
+        @keyframes flip-effect {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+
+        /* 针对头像的特殊翻转动画，以在动画期间保持其居中位置 */
+        @keyframes flip-avatar-effect {
+            from {
+                transform: translate(-50%, -50%) rotateY(0deg);
+            }
+            to {
+                transform: translate(-50%, -50%) rotateY(360deg);
+            }
+        }
+
+        /* 为所有翻转元素应用通用动画 */
+        .flipping {
+            animation: flip-effect 0.8s ease-in-out;
+        }
+
+        /* 通过更高优先级的选择器，为头像指定特殊的动画，从而解决位移问题 */
+        .avatar.flipping {
+            animation-name: flip-avatar-effect;
+        }
+
+        .stats { display: flex; justify-content: center; gap: 40px; margin-bottom: 23px; }
+        .stat-item { display: flex; flex-direction: column; align-items: center; }
+        .stat-number { font-size: 18px; font-weight: 600; color: #343434; }
+        .stat-label { font-size: 13px; color: #888888; margin-top: 4px; }
+        .action-buttons { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; }
+        .btn { padding: 8px 0; width: 105px; border-radius: 22px; font-size: 15px; font-weight: normal; cursor: pointer; border: none; text-align: center; transition: background-color 0.2s, color 0.2s; }
+        .btn-follow { background-color: #FF3B3C; color: #ffffff; }
+        .btn-follow.followed { background-color: #f0f0f0; color: #aaaaaa; font-weight: 600; }
+        .btn-message { background-color: #ffffff; color: #333333; border: 1px solid #CCCCCC; }
+        .divider { height: 8px; background-color: #F5F5F5; border: none; }
+
+        /* --- 动态内容区 --- */
+        .profile-content { background-color: #ffffff; }
+        .tabs { display: flex; justify-content: space-around; padding: 15px 20px 10px 20px; border-bottom: 1px solid #F5F5F5; }
+        .tab-item { color: #888888; font-size: 16px; cursor: pointer; position: relative; padding-bottom: 8px; transition: color 0.2s ease; }
+        .tab-item.active { color: #333333; font-weight: 600; }
+        .tab-item.active::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background-color: #333333; border-radius: 2px; }
+        .tab-content .content-pane { display: none; }
+        .tab-content .content-pane.active { display: block; }
+        .posts-list { padding: 15px; }
+        .post-card { display: flex; flex-direction: column; margin-bottom: 30px; }
+        .post-main { display: flex; }
+        .post-card .avatar-small { width: 40px; height: 40px; border-radius: 50%; background-color: #eee; margin-right: 12px; flex-shrink: 0; background-size: cover; background-position: center; /* (修改) 优化头像显示 */ }
+        .post-card .post-content { flex-grow: 1; }
+        .post-card .post-content .post-author { display: flex; align-items: center; font-weight: 600; color: #333; margin-bottom: 8px; }
+        .pinned-badge { background-color: #FED700; color: #A67C00; font-size: 11px; padding: 1px 5px; border-radius: 4px; margin-left: 8px; font-weight: 600; }
+        .post-card .post-content .post-text { color: #333; margin-bottom: 12px; line-height: 1.5; font-size: 15px; }
+        .mention { color: #589EAA; text-decoration: none; font-weight: 600; }
+        .post-image { max-width: 100%; object-fit: cover; border-radius: 12px; margin-bottom: 12px; }
+        .post-image.small { width: calc(320px * 0.65); height: calc(320px * 0.65); }
+        .post-actions { display: flex; justify-content: space-around; margin-left: 52px; padding-top: 12px; }
+        .action-item { display: flex; align-items: center; color: #969696; font-size: 14px; cursor: pointer; }
+        .action-item svg { width: 22px; height: 22px; margin-right: 6px; fill: none; stroke: #969696; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: all 0.2s ease-in-out; }
+        .action-item.like-btn.liked svg { fill: #E34846; stroke: #E34846; }
+        .comment-section { display: none; margin-left: 52px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #F0F0F0; }
+        .comment-section.show { display: block; }
+        .comment-item { display: flex; align-items: flex-start; margin-bottom: 15px; }
+        .comment-avatar { width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; object-fit: cover; }
+        .comment-body { font-size: 14px; }
+        .comment-user { font-weight: 600; color: #666; margin-bottom: 4px; }
+        .comment-text { line-height: 1.4; color: #333; }
+        .comment-image { max-width: 150px; border-radius: 8px; margin-top: 8px; }
+        .empty-content { padding: 60px 20px; text-align: center; color: #AAAAAA; font-size: 15px; }
+
+        /* --- 聊天界面样式 --- */
+        .chat-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .chat-screen.active { transform: translateX(0); }
+        .chat-header {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background-color: #F6F6F6;
+            border-bottom: 1px solid #EAEAEA;
+        }
+        .chat-header .back-btn { font-size: 24px; color: #2E9EF5; cursor: pointer; font-weight: bold; }
+        .chat-header .chat-title { font-size: 17px; font-weight: 600; color: #333; }
+        .chat-header .options-btn svg { width: 24px; height: 24px; stroke: #2E9EF5; stroke-width: 2; }
+        .chat-history { flex-grow: 1; overflow-y: auto; padding: 20px 10px; }
+        .message-row { display: flex; align-items: flex-end; margin-bottom: 20px; max-width: 100%; }
+        .message-row.outgoing { justify-content: flex-end; }
+        .message-row.incoming { justify-content: flex-start; }
+        .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .message-row.outgoing .chat-avatar { margin-left: 10px; }
+        .message-row.incoming .chat-avatar { margin-right: 10px; }
+        .message-bubble { padding: 10px 14px; border-radius: 18px; max-width: 75%; line-height: 1.5; }
+        .message-row.outgoing .message-bubble { background-color: #FEEDF7; border-bottom-right-radius: 4px; }
+        .message-row.incoming .message-bubble { background-color: #E3E3E5; color: #000; border-bottom-left-radius: 4px; }
+        
+        /* (新增) 聊天表情包样式 */
+        .message-bubble.image-bubble {
+            background-color: transparent;
+            padding: 0;
+        }
+        .chat-sticker {
+            display: block;
+            width: 120px;
+            height: auto;
+            border-radius: 8px;
+        }
+
+        .chat-input-bar { flex-shrink: 0; padding: 10px 15px; background-color: #F6F6F6; border-top: 1px solid #EAEAEA; }
+        .chat-input-bar input { width: 100%; padding: 10px 15px; border: none; border-radius: 18px; font-size: 15px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="profile-card">
+        <header class="profile-header">
+            <div class="background-image" id="profile-bg"></div>
+            <img src="https://img.58sb.cn/file/img/LKlWu1xv.jpg" alt="用户头像" class="avatar" id="profile-avatar">
+            <div class="profile-info-wrapper">
+                <div class="user-details">
+                    <div class="username-line" id="profile-username-container">
+                        <span class="username" id="profile-username">Tonroce20</span>
+                        <div class="verified-badge">V</div>
+                    </div>
+                    <p class="signature">生命中有些人是像礼物般的存在</p>
+                    <div class="stats">
+                        <div class="stat-item"><span class="stat-number">1</span><span class="stat-label">关注</span></div>
+                        <div class="stat-item"><span class="stat-number">1314k</span><span class="stat-label">粉丝</span></div>
+                        <div class="stat-item"><span class="stat-number">520w</span><span class="stat-label">获赞与收藏</span></div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-follow" id="follow-btn">关注</button>
+                        <button class="btn btn-message" id="message-btn">发信息</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="divider"></div>
+
+        <main class="profile-content">
+            <nav class="tabs">
+                <div class="tab-item active" data-tab="posts">动态</div>
+                <div class="tab-item" data-tab="works">作品</div>
+                <div class="tab-item" data-tab="likes">喜欢</div>
+            </nav>
+            <div class="tab-content">
+                <div id="posts" class="content-pane active">
+                    <div class="posts-list">
+                        <!-- 动态 1 (置顶) (修改) -->
+                        <div class="post-card">
+                            <div class="post-main"><div class="avatar-small" style="background-image: url('https://img11.360buyimg.com/ddimg/jfs/t1/347299/10/19330/46386/690630caFcee0b189/85d572bab20aa108.jpg');"></div><div class="post-content"><div class="post-author">Tonroce20<span class="pinned-badge">置顶</span></div><div class="post-text">我有点喜欢你才找你玩的<a href="#" class="mention">@Tweiour</a></div><img src="https://img.58sb.cn/file/img/0ixKdAOq.jpg" alt="动态图片" class="post-image small"></div></div>
+                            <div class="post-actions"><div class="action-item like-btn"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg><span>2.1w</span></div><div class="action-item comment-btn"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg><span>888</span></div><div class="action-item"><svg viewBox="0 0 24 24"><path d="M17 12l-5-5-5 5M12 17V7"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg><span>302</span></div></div>
+                            <div class="comment-section"><div class="comment-item"><img src="https://img.58sb.cn/file/img/q56zmOeG.jpg" class="comment-avatar"><div class="comment-body"><div class="comment-user">Tweiour</div><div class="comment-text">可以选or吗 因为中间萌萌的 像你</div><img src="https://img.58sb.cn/file/img/c1tjxbEl.jpg" class="comment-image"></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #E0E8F0;"></div><div class="comment-body"><div class="comment-user">夏夜晚风</div><div class="comment-text">磕到了磕到了！</div></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #F0EBE0;"></div><div class="comment-body"><div class="comment-user">芝士奶盖</div><div class="comment-text">好可爱的猫猫！</div></div></div></div>
+                        </div>
+                        <!-- 动态 2 (修改) --><div class="post-card"><div class="post-main"><div class="avatar-small" style="background-image: url('https://img11.360buyimg.com/ddimg/jfs/t1/347299/10/19330/46386/690630caFcee0b189/85d572bab20aa108.jpg');"></div><div class="post-content"><div class="post-author">Tonroce20</div><div class="post-text">我说我是普普通通的普普通通 你说我是让你扑通扑通的扑通扑通</div><img src="https://img.58sb.cn/file/img/P80gugPm.jpg" class="post-image"></div></div><div class="post-actions"><div class="action-item like-btn"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg><span>88.2k</span></div><div class="action-item comment-btn"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg><span>1.5k</span></div><div class="action-item"><svg viewBox="0 0 24 24"><path d="M17 12l-5-5-5 5M12 17V7"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg><span>521</span></div></div><div class="comment-section"><div class="comment-item"><div class="comment-avatar" style="background-color: #E2E2E2;"></div><div class="comment-body"><div class="comment-user">浪漫宇宙</div><div class="comment-text">这文案也太会了吧！</div></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #DDEBF1;"></div><div class="comment-body"><div class="comment-user">橘子海</div><div class="comment-text">我的心在扑通扑通！</div></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #F1E3DD;"></div><div class="comment-body"><div class="comment-user">甜度超标</div><div class="comment-text">好甜好甜。</div></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #E3F1DD;"></div><div class="comment-body"><div class="comment-user">心动便利店</div><div class="comment-text">为别人的爱情流泪。</div></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #EADDF1;"></div><div class="comment-body"><div class="comment-user">月亮不打烊</div><div class="comment-text">图片和文字都好配！</div></div></div></div></div>
+                        <!-- 动态 3 (修改) --><div class="post-card"><div class="post-main"><div class="avatar-small" style="background-image: url('https://img11.360buyimg.com/ddimg/jfs/t1/347299/10/19330/46386/690630caFcee0b189/85d572bab20aa108.jpg');"></div><div class="post-content"><div class="post-author">Tonroce20</div><div class="post-text">小挚友 虽常见 也常念 <a href="#" class="mention">@Tweiour</a></div></div></div><div class="post-actions"><div class="action-item like-btn"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg><span>1.8w</span></div><div class="action-item comment-btn"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg><span>667</span></div><div class="action-item"><svg viewBox="0 0 24 24"><path d="M17 12l-5-5-5 5M12 17V7"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path></svg><span>199</span></div></div><div class="comment-section"><div class="comment-item"><div class="comment-avatar" style="background-color: #E2E2E2;"></div><div class="comment-body"><div class="comment-user">山海皆可平</div><div class="comment-text">神仙友谊，羡慕了。</div></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #DDEBF1;"></div><div class="comment-body"><div class="comment-user">风的轨迹</div><div class="comment-text">最好的关系就是“常见也常念”。</div></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #F1E3DD;"></div><div class="comment-body"><div class="comment-user">不吃香菜</div><div class="comment-text">又在@ Tweiour，锁了！</div></div></div><div class="comment-item"><div class="comment-avatar" style="background-color: #E3F1DD;"></div><div class="comment-body"><div class="comment-user">一颗小树</div><div class="comment-text">真好呀。</div></div></div></div></div>
+                    </div>
+                </div>
+                <div id="works" class="content-pane"><div class="empty-content">暂无作品</div></div>
+                <div id="likes" class="content-pane"><div class="empty-content">暂无喜欢的作品</div></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 聊天界面 -->
+    <div id="chat-screen" class="chat-screen">
+        <header class="chat-header">
+            <span class="back-btn" id="chat-back-btn">&lt;</span>
+            <span class="chat-title">Tonroce20</span>
+            <span class="options-btn">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="1.5" fill="#2E9EF5"></circle><circle cx="17" cy="12" r="1.5" fill="#2E9EF5"></circle><circle cx="7" cy="12" r="1.5" fill="#2E9EF5"></circle></svg>
+            </span>
+        </header>
+        <main class="chat-history" id="chat-history">
+            <div class="message-row outgoing"><div class="message-bubble">你是不是一直在暗恋我</div><img src="https://img.58sb.cn/file/img/q56zmOeG.jpg" class="chat-avatar"></div>
+            <div class="message-row outgoing"><div class="message-bubble">我感觉到了你好像有一点喜欢我</div><img src="https://img.58sb.cn/file/img/q56zmOeG.jpg" class="chat-avatar"></div>
+            <!-- (新增) 表情包消息 -->
+            <div class="message-row outgoing"><div class="message-bubble image-bubble"><img src="https://img10.360buyimg.com/ddimg/jfs/t1/350786/40/20615/7288/690631d6F95d1edc6/f0233702cdaee414.jpg" alt="表情包" class="chat-sticker"></div><img src="https://img.58sb.cn/file/img/q56zmOeG.jpg" class="chat-avatar"></div>
+            <div class="message-row incoming"><img src="https://img.58sb.cn/file/img/LKlWu1xv.jpg" class="chat-avatar"><div class="message-bubble">？</div></div>
+            <div class="message-row incoming"><img src="https://img.58sb.cn/file/img/LKlWu1xv.jpg" class="chat-avatar"><div class="message-bubble">我有做什么吗？</div></div>
+            <div class="message-row outgoing"><div class="message-bubble">你呼吸了</div><img src="https://img.58sb.cn/file/img/q56zmOeG.jpg" class="chat-avatar"></div>
+            <div class="message-row outgoing"><div class="message-bubble">手段了得</div><img src="https://img.58sb.cn/file/img/q56zmOeG.jpg" class="chat-avatar"></div>
+            <div class="message-row incoming"><img src="https://img.58sb.cn/file/img/LKlWu1xv.jpg" class="chat-avatar"><div class="message-bubble">？</div></div>
+        </main>
+        <footer class="chat-input-bar">
+            <input type="text" placeholder="发信息...">
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- 数据存储 ---
+            const originalData = { avatar: 'https://img.58sb.cn/file/img/LKlWu1xv.jpg', bg: "url('https://img12.360buyimg.com/ddimg/jfs/t1/340136/30/26517/36233/6905f508F781ea04d/6a1f67630eaae99a.jpg')", username: 'Tonroce20' };
+            const flippedData = { avatar: 'https://img.58sb.cn/file/img/q56zmOeG.jpg', bg: "url('https://img.58sb.cn/file/img/A0zXxRqB.jpg')", username: 'Tweiour' };
+            let isFlipped = false;
+            let isAnimating = false;
+
+            // --- 元素获取 ---
+            const profileAvatar = document.getElementById('profile-avatar');
+            const profileBg = document.getElementById('profile-bg');
+            const profileUsernameContainer = document.getElementById('profile-username-container');
+            const profileUsername = document.getElementById('profile-username');
+            const followBtn = document.getElementById('follow-btn');
+            const messageBtn = document.getElementById('message-btn');
+            const chatScreen = document.getElementById('chat-screen');
+            const chatBackBtn = document.getElementById('chat-back-btn');
+            const chatHistory = document.getElementById('chat-history');
+            const tabs = document.querySelectorAll('.tab-item');
+            const panes = document.querySelectorAll('.content-pane');
+            const likeButtons = document.querySelectorAll('.like-btn');
+            const commentButtons = document.querySelectorAll('.comment-btn');
+
+            // --- 事件监听 ---
+
+            // 1. 头像翻转功能
+            profileAvatar.addEventListener('click', function() {
+                if (isAnimating) return;
+                isAnimating = true;
+                isFlipped = !isFlipped;
+                const elementsToFlip = [profileAvatar, profileBg, profileUsernameContainer];
+                elementsToFlip.forEach(el => el.classList.add('flipping'));
+                setTimeout(() => {
+                    const data = isFlipped ? flippedData : originalData;
+                    profileAvatar.src = data.avatar;
+                    profileBg.style.backgroundImage = data.bg;
+                    profileUsername.textContent = data.username;
+                }, 400);
+                profileAvatar.addEventListener('animationend', () => {
+                    elementsToFlip.forEach(el => el.classList.remove('flipping'));
+                    isAnimating = false;
+                }, { once: true });
+            });
+
+            // 2. 关注按钮功能
+            followBtn.addEventListener('click', function() {
+                this.classList.toggle('followed');
+                this.textContent = this.classList.contains('followed') ? '关注成功' : '关注';
+            });
+
+            // 3. 聊天界面功能
+            messageBtn.addEventListener('click', () => {
+                chatScreen.classList.add('active');
+                // 滚动到底部
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            });
+            chatBackBtn.addEventListener('click', () => {
+                chatScreen.classList.remove('active');
+            });
+
+            // 4. Tab 切换逻辑
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(item => item.classList.remove('active'));
+                    this.classList.add('active');
+                    panes.forEach(pane => pane.classList.remove('active'));
+                    document.getElementById(this.dataset.tab)?.classList.add('active');
+                });
+            });
+
+            // 5. 点赞按钮交互逻辑
+            likeButtons.forEach(button => {
+                button.addEventListener('click', function() { this.classList.toggle('liked'); });
+            });
+
+            // 6. 评论区展开/收起逻辑
+            commentButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    this.closest('.post-card')?.querySelector('.comment-section')?.classList.toggle('show');
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
